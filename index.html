@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Plugin Licensor</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="./assets/js/script.js" defer></script>
+    </head>
+    <body>
+        <div id="navbar">
+            <ul>
+                <li><a href="#overview">Overview</a><ul>
+                    <li><a href="#licensetypes">License Types</a></li>
+                </ul></li>
+                <li><a href="#authentication">Authentication</a></li>
+                <li><a href="#endpoints">Endpoints</a><ul>
+                    <li><a href="#registerstore">Register Store</a><ul><li>
+                        <a href="#registerstoreresponse">Response</a>
+                    </li></ul></li>
+                    <li><a href="#createplugin">Create Plugin</a><ul><li>
+                        <a href="#createpluginresponse">Response</a>
+                    </li></ul></li>
+                    <li><a href="#createlicense">Create License</a><ul><li>
+                        <a href="#createlicenseresponse">Response</a>
+                    </li></ul></li>
+                    <li><a href="#getlicense">Get License</a><ul><li>
+                        <a href="#getresponse">Response</a>
+                    </li></ul></li>
+                    <li><a href="#errors">Errors</a></li>
+                </ul></li>
+                <li><a href="#rates">Rate Limiting</a></li>
+                <li><a href="#errors">Errors</a></li>
+                <li><a href="#security">Security</a></li>
+            </ul>
+        </div>
+
+        <header>
+            <h1>Plugin Licensor API</h1>
+        </header>
+        <div id="main-content">
+            <div id="overview">
+                <h2>Overview</h2>
+                <p>
+                    The Plugin Licensor API has reached the testing 
+                    stage. This API will allow you to license software made with JUCE. The 
+                    API has multi-lingual support, but you have to configure it in the 
+                    <a href="#createplugin"><span>create_plugin</span></a> API call..
+                </p>
+                <h3 id="licensetypes">Licenses</h3>
+                <p>
+                    Just a note: these licenses will be invalidated if there is any change 
+                    to the end user's motherboard or CPU, unless someone finds an even better 
+                    way to get some good hardware identifiers than JUCE's 
+                    <span>SystemStats::getUniqueDeviceId()</span>.
+                </p>
+                <p>
+                    This issue is acceptable, since I will develop another API call that 
+                    will allow the end user to regenerate their license code and remove 
+                    all the machines from their license.
+                </p>
+                <p>
+                    You can find our supported license types 
+                    <a href="#enabled_license_types">here</a>.
+                </p>
+                
+                <p>
+                    Currently, only a few license types are available. There's the 
+                    "lax" license, "offline" license, "online" license,
+                </p>
+            </div><!--Overview-->
+
+            <div id="authentication">
+                <h2>Authentication</h2>
+                <p>
+                    All of the server-to-server requests with 
+                    private data being transferred are encrypted, 
+                    or <i>double-encrypted</i> if your count TLS.
+                </p>
+                <p>
+                    These encrypted requests have the following format:
+                </p>
+                <pre><code>
+{
+    data: String,
+    nonce: String,
+    key: String,
+    timestamp: String,
+    signature: String
+}
+                </code></pre>
+                <p>
+                   <ul>
+                    <li>
+                        <span>data</span> must be the json 
+                        of the request, encrypted with AES, encoded in base64.
+                    </li>
+                    <li>
+                        <span>nonce</span> must be the 
+                        nonce or "iv" used to encrypt <span>data</span>, encoded 
+                        in base64.
+                    </li>
+                    <li>
+                        <span>key</span> must be the key used to encrypt 
+                        <span>data</span>, but you must encrypt it with our 
+                        public rsa key, padded in PKCS1 format and encoded in 
+                        base64.
+                    </li>
+                    <li>
+                        <span>timestamp</span> must be the time that you sent 
+                        the request in seconds since Unix Epoch, as an unsigned 
+                        int.
+                    </li>
+                    <li>
+                        <span>signature</span> is the signature of 
+                        <span>hash_sha256(data + nonce + key + timestamp)</span>, 
+                        encoded in base64.
+                    </li>
+                    </ul>
+                </p>
+                <p>
+                    Since this is used for multiple API requests, you will 
+                    want to make a function that AES encrypts a json string 
+                    and then encrypts the AES key with our public RSA key, returning 
+                    this request structure.
+                </p>
+            </div><!--Authentication-->
+
+            <div id="endpoints">
+                <h1>Endpoints</h1>
+                <div id="registerstore">
+                    <h2 id="registerstore">Register Store</h2>
+                    <ul>
+                        <li>url: <span>https://4qlddpu7b6.execute-api.us-east-1.amazonaws.com/v1/register_store</span></li>
+                        <li>Allowed HTTP methods: <span>POST</span></li>
+                        <li><span>data</span> contents:</li>
+                    </ul>
+                    <pre><code>
+{
+    "key": String,
+    "user_first_name": String,
+    "user_last_name": String,
+    "user_discord": String,
+    "store_id": String
+}
+                    </code></pre>
+                    <h4>key</h4>
+                    <ul><li>
+                        create a 2048-bit RSA keypair, and send the 
+                        public key in PEM format. The input should 
+                        have a header of <span>-----BEGIN PUBLIC KEY-----</span>
+                    </li></ul>
+                    <h4>user_first_name and user_last_name</h4>
+                    <ul><li>
+                        Enter your name, or if you're feeling edgy 
+                        you can send initials or a pseudonym.
+                    </li></ul>
+                    <h4>user_discord</h4>
+                    <ul><li>
+                        Enter your discord username.
+                    </li></ul>
+
+                    <h3 id="registerstoreresponse">Response</h3>
+                    <p>The response will be in <a href="#authentication">our authentication format</a>, 
+                        and the encapsulated data will look like this:
+                    </p>
+                    <pre><code>
+{
+    "company_id": String
+}
+                    </code></pre>
+                    <p>
+                        This company id does not exactly need to be secret, as long as you 
+                        keep your private key a secret. You will need to use this to use the API.
+                    </p>
+
+                </div><!--Register store-->
+
+                <div id="createplugin">
+                    <h2>Create Plugin</h2>
+                    <ul>
+                        <li>url: <span>https://4qlddpu7b6.execute-api.us-east-1.amazonaws.com/v1/create_plugin</span></li>
+                        <li>Allowed HTTP methods: <span>POST</span></li>
+                        <li><span>data</span> contents:</li>
+                    </ul>
+                    <pre><code>
+{
+    "company_id": String,
+    "plugin_id_prefix": String,
+    "licensing_method": String,
+    "juce_private_key": String (optional),
+    "juce_public_key": String (optional),
+    "langauge_support": [
+    {
+        "language_name": String,
+        "license_no_longer_active": String,
+        "no_license_found": String,
+        "over_max_machines": String,
+        "success": String,
+    },
+    {...},
+    ],
+    enabled_license_types: [
+    {
+        "type_name": String,
+        "expiration_days": u16 (optional),
+        "frequency_days": u16 (optional),
+        "expiration_leniency": u8 (optional)
+    },
+    {...},
+    ],
+    machine_limit: String,
+    version: String,
+}
+                    </code></pre>
+                    <h4>company_id</h4>
+                    <ul><li>
+                        This is your company's id that was returned 
+                        from <span>register_store</span>.
+                    </li></ul>
+                    <h4>plugin_id_prefix</h4>
+                    <ul><li>
+                        This is just a few alphanumeric characters that will prefix your plugin id 
+                        so that you can personally identify it a little better. You can give it any string, 
+                        but it will only use the first 5 alphanumeric characters in the string, if any. 
+                        Otherwise, it will be a random string.
+                    </li></ul>
+                    <h4>licensing_method</h4>
+                    <ul><li>
+                        This parameter only accepts "juce" at the moment.
+                    </li></ul>
+                    <h4>juce_private_key</h4>
+                    <ul><li>
+                        This is the private key your JUCE software will use. It must be a 2048 bit 
+                        <span>juce::RSAKey</span>, as outputted by <span>.toString()</span>. 
+                        Alternatively, you can leave this field empty and use the default Plugin Licensor 
+                        2048 bit keypair, but that is not recommended. We will add automatic key generation eventually.
+                    </li></ul>
+                    <h4>juce_public_key</h4>
+                    <ul><li>
+                        This is the public key your JUCE software will use. It must be a 2048 bit 
+                        <span>juce::RSAKey</span>, as outputted by <span>.toString()</span>. 
+                        Alternatively, you can leave this field empty and use the default Plugin Licensor 
+                        2048 bit keypair, but that is not recommended. We will add automatic key generation eventually.
+                    </li></ul>
+                    <h4>language_support</h4>
+                    <p>
+                        This array of Language support objects allows for responses to the end user in different languages.
+                    </p>
+                    <h5>language_name</h5>
+                    <ul><li>
+                        The language_name doesn't need to be a complete langauge name. It is merely 
+                        an id that you will need to use in your JUCE software when calling <span>auth_juce</span>. 
+                        To use this with multiple languages, you will either need to:
+                        <br><ul>
+                            <li>Make individual versions of plugins in different languages, and changing the call to <span>auth_juce</span>.</li>
+                            <li>Implement a language selection menu, and establish a relationship between the selected language and <span>language_name</span>.</li>
+                        </ul>
+                        <br>
+                        That might sound complicated, but if you want your UI and the responses from the licensing service to be 
+                        in the same language, all you have to do is fill this out for each language your UI comes in.
+                    </li></ul>
+                    <h5>license_no_longer_active</h5>
+                    <p>
+                        Whatever message you put here will be shown to users when they try to activate a license 
+                        that isn't active anymore, such as when they are using a trial license or a subscription license.
+                    </p>
+                    <h5>no_license_found</h5>
+                    <p>
+                        The message you put here will be shown to users when they try to use a license code 
+                        that doesn't correspond to a license.
+                    </p>
+                    <h5>over_max_machines</h5>
+                    <p>
+                        The message you put here will be shown to users when they try to add their machine to 
+                        a license, but the license is at the machine limit.
+                    </p>
+                    <h5>success</h5>
+                    <p>
+                        The message you put here will be shown to users when they successfully register their 
+                        plugin with a license. There are a few features you can use for this message:
+                    </p>
+                    <ul>
+                        <li>
+                            You can use {first}, {last}, and/or {full} to insert the license owner's name 
+                            into the message, but only if you provide us with their names in 
+                            <span>create_license</span>.
+                        </li>
+                        <li>
+                            You can use {ratio} to output the ratio of how many machines are on the license to 
+                            the machine limit.
+                        </li>
+                        <li>
+                            You can have "random" success responses by entering multiple success messages 
+                            separated by newline characters.
+                        </li>
+                    </ul>
+
+                    <h4 id="enabled_license_types">enabled_license_types</h4>
+                    <p>
+                        This list of license data will determine how often plugins 
+                        expire, and how often the plugin reauthenticates with the API.
+                    </p>
+
+                    <h5>type_name</h5>
+                    <p>
+                        The type name must be one of the license type names listed below. 
+                        The subscription license type will appear to work at first, but there 
+                        isn't an API method that pushes back the expiration date... yet.
+                    </p>
+                    <ul>
+                        <li>Offline<ul><li>
+                            The offline license type has no expiration on the client side, 
+                            and it occassionally checks back with our server to check if 
+                            the license is still active. You can configure how often it checks 
+                            using the following parameters
+                        </li></ul></li>
+                        <li>Online<ul><li>
+                            The online license type expires on the client side, 
+                            and it occassionally checks back with our server to refresh the 
+                            expiration and check if the license is still active. You can 
+                            configure this  
+                            using the following parameters
+                        </li></ul></li>
+                        <li>Lax<ul><li>
+                            The lax license type never expires and it never contacts the server 
+                            again after the machine is registered, <b>but</b> machines on this 
+                            license <b>cannot</b> be removed since the machines will not contact 
+                            the server. This might be bypassable by requiring the end user to 
+                            deactivate the license online, but that method could be abused.
+                        </li></ul></li>
+                        <li>Trial<ul><li>
+                            The trial license type expires on the client side, 
+                            and it occassionally checks back with our server to refresh the 
+                            expiration and check if the license was upgraded. You can 
+                            configure this in the following parameters.
+                        </li></ul></li>
+                        <li>Subscription (not fully implemented)<ul><li>
+                            The subscription license checks back with our server to check if 
+                            the subscription is still active. You can configure how often it checks 
+                            using the following parameters
+                        </li></ul></li>
+                    </ul>
+
+                    <h5>expiration_days</h5>
+                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <ul>
+                        <li>Online</li>
+                        <li>Trial</li>
+                        <li>Subscription</li>
+                    </ul>
+                    <p>
+                        For online licenses, this will allow the user to use your software for 
+                        this many days without authenticating with our service. A generous expiration time 
+                        would be 60+ days.
+                    </p>
+                    <p>
+                        For trial and subscription licenses, this is how long the trial or subscription 
+                        period lasts.
+                    </p>
+
+                    <h5>frequency_days</h5>
+                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <ul>
+                        <li>Online</li>
+                        <li>Trial</li>
+                        <li>Subscription</li>
+                        <li>Offline</li>
+                    </ul>
+                    <p>
+                        This parameter determines how much time has to pass since the 
+                        last authentication to try authenticating again. It needs to be less 
+                        than expiration_days, if it is set.
+                    </p>
+                    <p>
+                        For Online and Offline licenses, the frequency should be less than half of the expiration. 
+                        1-14 days is okay.
+                    </p>
+
+                    <h5>expiration_leniency</h5>
+                    <p>
+                        This parameter is only for subscriptions. It adds this amount 
+                        of days to the expiration date on the client side in case the 
+                        user's machine isn't able to contact the service for this time span 
+                        after the real expiration was going to be, or if the license wasn't 
+                        updated in time with the client's request. You are not obligated to 
+                        use this. Feel free to set it to 0.
+                    </p>
+                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <ul>
+                        <li>Subscription</li>
+                    </ul>
+
+                    <h4>machine_limit</h4>
+                    <ul><li>
+                        This is the default machine limit for one of your 
+                        licenses. This can be multiplied with order quantities, 
+                        or you can set a custom <span>machine_limit</span> with 
+                        the <a href="#createlicense"><span>create_license</span> API method.</a>
+                    </li></ul>
+
+                    <h4>version</h4>
+                    <ul><li>
+                        This parameter could be used to check if there is an update available 
+                        on the client side. This will not work until an undeveloped API method 
+                        updates the version of a plugin.
+                    </li></ul>
+                    
+                    <h3 id="createpluginresponse">Response</h3>
+                    <p>The response will be in <a href="#authentication">our authentication format</a>, 
+                        and the encapsulated data will look like this:
+                    </p>
+                    <pre><code>
+{
+    "plugin_id": String,
+    "license_types": [String],
+    "languages": [String],
+    "juce_public_key": String,
+}
+                    </code></pre>
+                    <p>
+                        This data will be returned if the plugin was successfully created. 
+                        You will need to save the plugin_id and license_types and associate it with your online 
+                        product, such as by adding them as hidden attributes so it can be sent 
+                        using <span>create_license</span>.
+                    </p>
+                    <p>
+                        The languages returned are the language names you will need to use 
+                        in the client-side C++ code, along with the <span>juce_public_key</span> 
+                        in order to receive those custom responses you set.
+                    </p>
+
+                </div><!--Create Plugin-->
+
+                <div id="createlicense">
+                    <h2>Create License</h2>
+                    <ul>
+                        <li>url: <span>https://4qlddpu7b6.execute-api.us-east-1.amazonaws.com/v1/create_license</span></li>
+                        <li>Allowed HTTP methods: <span>POST</span></li>
+                        <li><span>data</span> contents:</li>
+                    </ul>
+                    <pre><code>
+{
+    "company": String,
+    "uuid": String,
+    "plugins": [
+    {
+        "id": String,
+        "license_type": String,
+        "quantity": String (optional),
+        "machine_limit": String (optional),
+        "subtotal": String,
+    },
+    {...},
+    ],
+    "order_id": String (optional),
+    "first_name": String (optional),
+    "last_name": String (optional),
+    "email": String (optional)
+}
+                    </code></pre>
+                    <h4>company</h4>
+                    <ul><li>
+                        This is your company's id that was returned 
+                        from <span>register_store</span>.
+                    </li></ul>
+                    <h4>uuid</h4>
+                    <ul><li>
+                        This needs to be a uuid for the user.
+                    </li></ul>
+                    <h4>plugins</h4>
+                    <p>
+                        This is a list of the plugins the user purchased with some 
+                        associated information.
+                    </p>
+                    <h4>id</h4>
+                    <ul><li>
+                        This parameter only accepts "juce" at the moment.
+                    </li></ul>
+
+
+                    <h3 id="createlicenseresponse">Response</h3>
+                    <p>The response will be in <a href="#authentication">our authentication format</a>, 
+                        and the encapsulated data will look like this:
+                    </p>
+                    <pre><code>
+{
+    "code": String,
+    "plugins": [
+    {
+        "id": String,
+        "machines": [
+        {
+            "id": String,
+            "computer_name": String,
+            "os": String,
+        },],
+        "max_machines": String,
+        "license_type": String,
+    },]
+}
+                    </code></pre>
+                    <p>
+                        This data will be returned if the license was successfully created. 
+                        The code is the license code that will be used on your software, 
+                        and everything else can be displayed for the user, so that they 
+                        can view their license's status.
+                    </p>
+                    <p>
+                        I still need to implement a way for the user to see the expiration time, 
+                        and another API method to regenerate the license code, which would be shown 
+                        on the page that this data is shown on.
+                    </p>
+                </div><!--Create License-->
+
+                <div id="getlicense">
+                    <h2>Get License</h2>
+                    <ul>
+                        <li>url: <span>https://4qlddpu7b6.execute-api.us-east-1.amazonaws.com/v1/get_license</span></li>
+                        <li>Allowed HTTP methods: <span>POST</span></li>
+                        <li><span>data</span> contents:</li>
+                    </ul>
+                    <pre><code>
+{
+    "company": String,
+    "uuid": String,
+}
+                    </code></pre>
+                    <h4>company</h4>
+                    <ul><li>
+                        This is your company's id that was returned 
+                        from <span>register_store</span>.
+                    </li></ul>
+                    <h4>uuid</h4>
+                    <ul><li>
+                        This needs to be a uuid for the user.
+                    </li></ul>
+
+                    <h3 id="getresponse">Response</h3>
+                    <p>The response will be in <a href="#authentication">our authentication format</a>, 
+                        and the encapsulated data will look like this:
+                    </p>
+                    <pre><code>
+{
+    "code": String,
+    "plugins": [
+    {
+        "id": String,
+        "machines": [
+        {
+            "id": String,
+            "computer_name": String,
+            "os": String,
+        },],
+        "max_machines": String,
+        "license_type": String,
+    },]
+}
+                    </code></pre>
+                    <p>
+                        This data will return if the request was successful, same as create_license.
+                    </p>
+                    <p>
+                        I still need to implement a way for the user to see the expiration time, 
+                        and another API method to regenerate the license code, which would be shown 
+                        on the page that this data is shown on.
+                    </p>
+                </div><!--Get License-->
+
+                <div id="authjuce">
+                    <h2>Auth_JUCE</h2>
+                    <p>
+                        This API method is accessed from the software you are licensing. 
+                        Maybe one day it could be a standalone application.
+                    </p>
+                    <ul>
+                        <li>url: <span>https://4qlddpu7b6.execute-api.us-east-1.amazonaws.com/v1/auth_JUCE</span></li>
+                        <li>Allowed HTTP methods: <span>POST</span></li>
+                        <li><span>data</span> contents:</li>
+                    </ul>
+                    <pre><code>
+{
+    "company": String,
+    "product": String,
+    "license_code": String,
+    "mach": String,
+    "os": String,
+    "is_64": String,
+    "comp_name": String,
+    "logon_name": String,
+    "user_region": String,
+    "display_language": String,
+    "logical_cores": String,
+    "physical_cores": String,
+    "cpu_freq": String,
+    "cpu_vendor": String,
+    "cpu_model": String,
+    "memory": String,
+    "has_mmx": String,
+    "has_3DNow": String,
+    "has_FMA3": String,
+    "has_FMA4": String,
+    "has_SSE": String,
+    "has_SSE2": String,
+    "has_SSE3": String,
+    "has_SSSE3": String,
+    "has_SSE41": String,
+    "has_SSE42": String,
+    "has_AVX": String,
+    "has_AVX2": String,
+    "has_AVX512F": String,
+    "has_AVX512BW": String,
+    "has_AVX512CD": String,
+    "has_AVX512DQ": String,
+    "has_AVX512ER": String,
+    "has_AVX512IFMA": String,
+    "has_AVX512PF": String,
+    "has_AVX512VBMI": String,
+    "has_AVX512VL": String,
+    "has_AVX512VPOPCNTDQ": String,
+    "has_Neon": String,
+    "client_language": String
+}
+                    </code></pre>
+                    <p>
+                        Alright... I know that looks like a lot, but it will be 
+                        implemented in an open source C++ library. Also, I didn't 
+                        consider making certain parameters optional entirely, but 
+                        most of those will be completely optional in Version 1 of this API.
+                    </p>
+                    <p>Here are the required parameters. All of the other ones can be set to <span>x</span></p>
+                    <h4>company</h4>
+                    <ul><li>
+                        This is your company's id that was returned 
+                        from <span>register_store</span>.
+                    </li></ul>
+                    <h4>product</h4>
+                    <ul><li>
+                        This is the Plugin ID that was returned from <span>create_plugin</span>.
+                    </li></ul>
+                    <h4>mach</h4>
+                    <ul><li>
+                        The machine identifier.
+                    </li></ul>
+                    <h4>client_language</h4>
+                    <ul><li>
+                        This is the language that the UI in, referred to using the 
+                        language_names you set in <a href="#createplugin"><span>create_plugin</span></a>
+                    </li></ul>
+
+                    <p>
+                        The extra data should only be set if the user checks a checkbox indicating 
+                        that hardware information will be sent. Some of it will be used for analysis, 
+                        the rest of the information will be displayed to the user when viewing their license 
+                        information on your website.
+                    </p>
+                </div>
+
+            </div><!--Endpoints-->
+
+            <div id="rates">
+                <h2>Rate Limiting</h2>
+                <p>
+                    Your API usage will be limited, but if you use it 
+                    legitimately, you shouldn't hit the limits.
+                </p>
+            </div><!--Rate Limiting-->
+
+            <div id="errors">
+                <h2>Errors</h2>
+                <p>
+                    There might be some errors when sending requests, but 
+                    they will all have an identifier if it is a 500 error, 
+                    and if it is a 400 error, it will contain a description, 
+                    with server-side validation.
+                </p>
+                <p>
+                    There is, however, an exception for one API method in particular 
+                    that does not have these descriptive errors. That method is the 
+                    <span>auth_juce</span> API method. It should do its job, 
+                    but if it runs into a 500 error, it likely won't say what is wrong... 
+                    so let us know if you encounter any weird errors even though you did 
+                    everything as prescribed.
+                </p>
+            </div><!--Errors-->
+
+            <div id="security">
+                <h2>Security</h2>
+                <p>
+                    All data sent is encrypted in transit and at rest. Email addresses 
+                    from end users, if provided, are salted and hashed. IDs are encrypted 
+                    before being stored, 
+                    dissociating the IDs from any private keys that may or may not be stored in 
+                    our database. User inputs are sanitized and validated as needed. 
+                </p>
+                <p>
+                    If you find any weak points in our authentication procedure, 
+                    please contact us.
+                </p>
+            </div><!--Security-->
+
+        </div>
+    </body>
+</html>
+
+<!--
+    Todo: document `register store`
+    -update `verify_signature()` in all server-server api calls
+-->
