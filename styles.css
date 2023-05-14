@@ -3,12 +3,9 @@
 }
 html {
     scroll-behavior:smooth;
-    scroll-margin: -200px;
+    font-size: 19px;
 }
 
-h1, h2, h3, h4, h5 {
-    color:#d2991d;
-}
 
 a {
     color: #d2991d;
@@ -55,6 +52,7 @@ body {
     overflow: auto;
     position: fixed;
     left: 0;
+    color: #d2d2d2;
     background-color: #505050;
 }
 
@@ -86,16 +84,16 @@ body {
 }
 
 #main-content {
-    margin-top: 2em;
+    margin-top: 0;
     background-color: #353535;
     margin-left: 25%;
-    margin-right: 20%;
+    margin-right: 15%;
     padding: 1em;
     color: #ddd;
 }
 
 #main-content {
-    padding-top: 4em;
+    padding-top: 2em;
 }
 
 span {
@@ -104,4 +102,19 @@ span {
     white-space: pre-wrap;
     border-radius: 2px;
     padding: 0.03em 0.325em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color:#d2991d;
+    font-size: 1.5em;
+    margin-bottom: 0;
+}
+p {
+    margin-top: 8px;
+}
+
+
+#navbar ul li a {
+    color: #d2d2d2;
+    
 }
