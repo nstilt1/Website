@@ -28,6 +28,7 @@
                     <li><a href="#getlicense">Get License</a><ul><li>
                         <a href="#getresponse">Response</a>
                     </li></ul></li>
+                    <li><a href="#authjuce">Auth_JUCE</a></li>
                     <li><a href="#errors">Errors</a></li>
                 </ul></li>
                 <li><a href="#rates">Rate Limiting</a></li>
@@ -38,20 +39,25 @@
 
         <header>
             <h1>Plugin Licensor API</h1>
-            <p>Version 0.9.2<br><a href="changelog">Changelog</a></p>
+            <p>Version 0.9.3<br><a href="changelog">Changelog</a></p>
         </header>
         <div id="main-content">
             <div id="overview">
+                <h2>Status</h2>
+                <ul>
+                    <li>The server to server methods should be functional.</li>
+                    <li>Subscription license types aren't yet fully implemented.</li>
+                    <li>
+                        <span>auth_juce</span> hasn't been fully tested, but it has 
+                        passed initial testing.
+                    </li>
+                </p>
                 <h2>Overview</h2>
                 <p>
                     The Plugin Licensor API has reached the debugging 
                     stage. This API will allow you to license software made with JUCE. The 
                     API has multi-lingual support, but you have to configure it in the 
                     <a href="#createplugin"><span>create_plugin</span></a> API call..
-                </p>
-                <h2>Status</h2>
-                <p>
-                    There is currently an issue with the authentication. It is being debugged.
                 </p>
                 <h3 id="licensetypes">Licenses</h3>
                 <p>
@@ -148,10 +154,10 @@
                     <pre><code>
 {
     "key": String,
-    "user_first_name": String,
-    "user_last_name": String,
-    "user_discord": String,
-    "store_id": String
+    "first_name": String,
+    "last_name": String,
+    "discord": String,
+    "store_id_prefix": String
 }
                     </code></pre>
                     <h4>key</h4>
@@ -160,14 +166,23 @@
                         public key in PEM format. The input should 
                         have a header of <span>-----BEGIN PUBLIC KEY-----</span>
                     </li></ul>
-                    <h4>user_first_name and user_last_name</h4>
+                    <h4>first_name and last_name</h4>
                     <ul><li>
                         Enter your name, or if you're feeling edgy 
                         you can send initials or a pseudonym.
                     </li></ul>
-                    <h4>user_discord</h4>
+                    <h4>discord</h4>
                     <ul><li>
                         Enter your discord username.
+                    </li></ul>
+
+                    <h4>store_id_prefix</h4>
+                    <ul><li>
+                        Enter up to 5 alphanumeric characters, and they will be 
+                        prefixed to your actual <span>store_id</span>. It doesn't 
+                        need to have any resemblance with your store's name. 
+                        You just need to be able to recognize which one is which if you 
+                        happen to set up multiple stores with this API.
                     </li></ul>
 
                     <h3 id="registerstoreresponse">Response</h3>
@@ -195,7 +210,7 @@
                     </ul>
                     <pre><code>
 {
-    "company_id": String,
+    "store_id": String,
     "plugin_id_prefix": String,
     "licensing_method": String,
     "juce_private_key": String (optional),
@@ -210,8 +225,7 @@
     },
     {...},
     ],
-    "custom_success_message": String (optional),
-    enabled_license_types: [
+    "enabled_license_types": [
     {
         "type_name": String,
         "expiration_days": u16 (optional),
@@ -220,13 +234,13 @@
     },
     {...},
     ],
-    machine_limit: String,
-    version: String,
+    "machine_limit": String,
+    "version": String,
 }
                     </code></pre>
-                    <h4>company_id</h4>
+                    <h4>store_id</h4>
                     <ul><li>
-                        This is your company's id that was returned 
+                        This is your store's id that was returned 
                         from <span>register_store</span>.
                     </li></ul>
                     <h4>plugin_id_prefix</h4>
@@ -256,7 +270,8 @@
                     </li></ul>
                     <h4>language_support</h4>
                     <p>
-                        This array of Language support objects allows for responses to the end user in different languages.
+                        This array of Language support objects allows for sending responses to the 
+                        end user in different languages.
                     </p>
                     <h5>language_name</h5>
                     <ul><li>
@@ -356,7 +371,7 @@
                     </ul>
 
                     <h5>expiration_days</h5>
-                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <p>this is required for the following license <span>type_name</span>s:</p>
                     <ul>
                         <li>Online</li>
                         <li>Trial</li>
@@ -373,7 +388,7 @@
                     </p>
 
                     <h5>frequency_days</h5>
-                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <p>this is required for the following license <span>type_name</span>s:</p>
                     <ul>
                         <li>Online</li>
                         <li>Trial</li>
@@ -399,7 +414,7 @@
                         updated in time with the client's request. You are not obligated to 
                         use this. Feel free to set it to 0.
                     </p>
-                    <p>this is required for the following <span>type_name</span>s:</p>
+                    <p>this is required for the following license <span>type_name</span>s:</p>
                     <ul>
                         <li>Subscription</li>
                     </ul>
@@ -426,21 +441,21 @@
                     <pre><code>
 {
     "plugin_id": String,
-    "license_types": [String],
-    "languages": [String],
+    "license_types": String,
+    "languages": String,
     "juce_public_key": String,
 }
                     </code></pre>
                     <p>
                         This data will be returned if the plugin was successfully created. 
-                        You will need to save the plugin_id and license_types and associate it with your online 
+                        You will need to save the plugin_id and license_types and associate it with your 
                         product, such as by adding them as hidden attributes so it can be sent 
                         using <span>create_license</span>.
                     </p>
                     <p>
                         The languages returned are the language names you will need to use 
-                        in the client-side C++ code, along with the <span>juce_public_key</span> 
-                        in order to receive those custom responses you set.
+                        in the client-side code, along with the <span>juce_public_key</span> 
+                        in order to receive and authenticate server responses.
                     </p>
 
                 </div><!--Create Plugin-->
@@ -455,7 +470,7 @@
                     </ul>
                     <pre><code>
 {
-    "company": String,
+    "store_id": String,
     "uuid": String,
     "plugins": [
     {
@@ -468,15 +483,15 @@
     },
     {...},
     ],
-    "order_id": String (optional),
+    "order_id": String,
     "first_name": String (optional),
     "last_name": String (optional),
     "email": String (optional)
 }
                     </code></pre>
-                    <h4>company</h4>
+                    <h4>store_id</h4>
                     <ul><li>
-                        This is your company's id that was returned 
+                        This is your store's id that was returned 
                         from <span>register_store</span>.
                     </li></ul>
                     <h4>uuid</h4>
@@ -494,11 +509,9 @@
                     <p>One of the license types returned from <span>create_plugin</span></p>
                     <h5>quantity</h5>
                     <p>
-                        This must not be set if <span>machine_limit</span> is set. If you want your licenses to increase the machine 
-                        limit linearly when related to how much the customer pays, then you 
-                        just set this to the quantity, and it will set or increase their machine limit 
-                        by <span>machine_limit * quantity</span>, depending on if the user already 
-                        owns a license with this license type.
+                        This must not be set if <span>machine_limit</span> is set. The user's machine 
+                        limit will be <span>quantity * machine_limit</span> that was set in 
+                        <span>create_plugin</span>.
                     </p>
                     <h5>machine_limit</h5>
                     <p>
@@ -527,11 +540,34 @@
                         <span>create_plugin</span>. If you're worried about overriding the language support 
                         that you created, you could also get Chat GPT to translate it.
                     </p>
-                    <h4>id</h4>
+                    <h4>order_id</h4>
                     <ul><li>
                         This parameter only accepts "juce" at the moment.
                     </li></ul>
-
+                    <h4>first_name</h4>
+                    <ul><li>
+                        The user's first name. This field is optional, but 
+                        it will allow our success responses to include the user's 
+                        first name in the response, as well as send it to your software 
+                        to be displayed, or whatever else you want to do with it.
+                    </li></ul>
+                    <h4>last_name</h4>
+                    <ul><li>
+                        The user's last name. This field is optional, but it will 
+                        allow our success responses to include the user's last name, 
+                        as well as send it to your software to be displayed, or 
+                        whatever else you want to do with it.
+                    </li></ul>
+                    <h4>email</h4>
+                    <ul><li>
+                        The user's email. This field is optional, but it will give us the 
+                        opportunity to do some analysis on software license ownership. 
+                        We do not sell emails. You can see exactly how emails are stored 
+                        by looking at our <a href="#createlicensesource">source code</a>, 
+                        except for the definition of our 
+                        <span>salt_email()</span> function, which is private for a reason. 
+                        We'll leave that implementation to your imagination.
+                    </li></ul>
 
                     <h3 id="createlicenseresponse">Response</h3>
                     <p>The response will be in <a href="#authentication">our authentication format</a>, 
@@ -576,13 +612,13 @@
                     </ul>
                     <pre><code>
 {
-    "company": String,
+    "store_id": String,
     "uuid": String,
 }
                     </code></pre>
-                    <h4>company</h4>
+                    <h4>store_id</h4>
                     <ul><li>
-                        This is your company's id that was returned 
+                        This is your store's id that was returned 
                         from <span>register_store</span>.
                     </li></ul>
                     <h4>uuid</h4>
@@ -755,8 +791,21 @@
 
             <div id="changelog">
                 <h2>Changelog</h2>
+                <h3>v0.9.3</h3>
+                <p>
+                    I would call these breaking changes, but it wasn't working prior to 
+                    this version, so nothing was really broken. It should be working now, 
+                    but <span>auth_juce</span> still hasn't been fully tested.
+                </p>
+                <ul>
+                    <li>Fixed and changed the parameter names of the following API methods:<ul>
+                        <li><span>register_store</span></li>
+                        <li><span>create_plugin</span></li>
+                        <li><span>create_license</span></li>
+                        <li><span>get_license</span></li>
+                    </ul></li>
+                </ul>
                 <h3>v0.9.2</h3>
-
                 <p>Added Changelog</p>
                 <h3>v0.9.1</h3>
                 <p>Bug fixes,  and addition of custom_success_message</p>
